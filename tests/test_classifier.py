@@ -59,15 +59,31 @@ def test_rm_of_unsnapshotted_dirs_is_irreversible():
     assert not _rev("rm -rf .venv")
 
 
-def test_quoted_unsnapshotted_path_is_still_irreversible():
-    # Quoting must not smuggle an unsnapshotted path past the check: the token
-    # split used to keep the quote characters glued on, so `".git"` didn't match
-    # and the delete auto-ran while the ledger claimed it was undoable.
-    assert not _rev('rm -rf ".git"')
-    assert not _rev("rm -rf '.git'")
-    assert not _rev('rm -rf "node_modules"')
-    assert not _rev("rm -rf '.venv'")
-    assert not _rev('rm -rf "node_modules/.cache"')
+def test_adjacent_syntax_cannot_hide_an_unsnapshotted_path():
+    # Nothing glued to the name may hide it. The old split was on whitespace and
+    # "/" only, so quotes (`".git"`) and shell operators (`.git>out`) kept the
+    # token from matching _NOT_SNAPSHOTTED — the delete then auto-ran with no
+    # confirm while the ledger claimed it was undoable.
+    for cmd in (
+        'rm -rf ".git"',
+        "rm -rf '.git'",
+        'rm -rf "node_modules"',
+        "rm -rf '.venv'",
+        'rm -rf "node_modules/.cache"',
+        "rm -rf .git>out",  # redirection glued on
+        "rm -rf .git>>out",
+        "rm -rf .git 2>/dev/null",
+        "rm -rf .venv>x",
+        "rm -rf (node_modules)",
+        "rm -rf node_modules>/dev/null",
+    ):
+        assert not _rev(cmd), cmd
+
+
+def test_names_merely_containing_a_skipped_word_stay_reversible():
+    # The tokenizer matches whole path components, not substrings.
+    assert _rev("rm -rf mygitrepo")
+    assert _rev("rm -rf gitignore")
 
 
 def test_rm_of_normal_workspace_paths_stays_reversible():
