@@ -59,11 +59,23 @@ def test_rm_of_unsnapshotted_dirs_is_irreversible():
     assert not _rev("rm -rf .venv")
 
 
+def test_quoted_unsnapshotted_path_is_still_irreversible():
+    # Quoting must not smuggle an unsnapshotted path past the check: the token
+    # split used to keep the quote characters glued on, so `".git"` didn't match
+    # and the delete auto-ran while the ledger claimed it was undoable.
+    assert not _rev('rm -rf ".git"')
+    assert not _rev("rm -rf '.git'")
+    assert not _rev('rm -rf "node_modules"')
+    assert not _rev("rm -rf '.venv'")
+    assert not _rev('rm -rf "node_modules/.cache"')
+
+
 def test_rm_of_normal_workspace_paths_stays_reversible():
     # Normal in-workspace deletes ARE snapshotted → still auto-run (no false alarm).
     assert _rev("rm -rf some_folder")
     assert _rev("rm file.txt")
     assert _rev("rm -rf src/old")
+    assert _rev('rm -rf "src/old"')  # quoting a normal path stays reversible
 
 
 def test_outside_path_flagged():

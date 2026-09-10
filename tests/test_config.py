@@ -117,3 +117,42 @@ def test_max_tokens_invalid_or_nonpositive_is_none(monkeypatch):
     for bad in ("abc", "0", "-5", "1.5"):
         monkeypatch.setenv("OPENDOT_MAX_TOKENS", bad)
         assert _max_tokens() is None
+
+
+# --- budget caps reach the agent through the CLI, not just AgentConfig ---
+
+
+def _cfg_via_cli(monkeypatch, **kwargs):
+    """Build an agent through cli._build_agent and return the AgentConfig it made."""
+    import opendot.cli as cli
+
+    monkeypatch.setattr(cli, "Agent", lambda cfg, **kw: cfg)
+    return cli._build_agent("gpt-5.1", ".", **kwargs)
+
+
+def test_cli_falls_back_to_budget_env_vars(monkeypatch, tmp_path):
+    """OPENDOT_MAX_USD / OPENDOT_MAX_TOKENS are documented to supply the defaults,
+    but the CLI always passed argparse's None, which overrides AgentConfig's
+    default_factory (an explicit None means the factory never runs) — so the env
+    vars were silently ignored on every CLI invocation."""
+    monkeypatch.setenv("OPENDOT_MAX_USD", "5")
+    monkeypatch.setenv("OPENDOT_MAX_TOKENS", "1000")
+    cfg = _cfg_via_cli(monkeypatch, max_usd=None, max_tokens=None)
+    assert cfg.max_usd == 5.0
+    assert cfg.max_tokens == 1000
+
+
+def test_cli_flags_override_budget_env_vars(monkeypatch):
+    monkeypatch.setenv("OPENDOT_MAX_USD", "5")
+    monkeypatch.setenv("OPENDOT_MAX_TOKENS", "1000")
+    cfg = _cfg_via_cli(monkeypatch, max_usd=0.25, max_tokens=42)
+    assert cfg.max_usd == 0.25
+    assert cfg.max_tokens == 42
+
+
+def test_cli_no_env_and_no_flags_is_unlimited(monkeypatch):
+    monkeypatch.delenv("OPENDOT_MAX_USD", raising=False)
+    monkeypatch.delenv("OPENDOT_MAX_TOKENS", raising=False)
+    cfg = _cfg_via_cli(monkeypatch, max_usd=None, max_tokens=None)
+    assert cfg.max_usd is None
+    assert cfg.max_tokens is None

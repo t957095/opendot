@@ -791,9 +791,21 @@ class Toolbox:
                     note="outside the workspace — not undoable" if outside else "",
                 )
             new = text.replace(find, replace, count if count > 0 else -1)
-            p.write_text(new, encoding="utf-8")
+            try:
+                if outside:
+                    # Already confirmed + recorded irreversible above; a plain
+                    # write is fine (containment doesn't apply outside the workspace).
+                    p.write_text(new, encoding="utf-8")
+                else:
+                    # In-workspace: open-time containment, same as write_file, so a
+                    # symlinked target can't redirect the edit outside the snapshot
+                    # boundary (an edit is a mutating write like any other).
+                    self._safe_write_within_workspace(p, new)
+            except Exception as exc:  # noqa: BLE001
+                return f"error editing {p}: {exc}"
             replaced = n if count <= 0 else min(n, count)
-            rel = self._rel(p)
+            # Report the path the caller named, not whatever a symlink pointed at.
+            rel = self._rel_no_resolve(p)
             return f"edited {rel} ({replaced} replacement(s))\n" + _unified_diff(text, new, rel)
 
         def move(src: str, dst: str, overwrite: bool = False) -> str:

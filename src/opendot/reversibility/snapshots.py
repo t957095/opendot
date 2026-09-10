@@ -18,6 +18,7 @@ dirs; callers may override in both directions (see ``IgnoreRules``).
 from __future__ import annotations
 
 import difflib
+import fnmatch
 import hashlib
 import json
 import os
@@ -89,7 +90,14 @@ class IgnoreRules:
     def skipped(self, name: str) -> bool:
         if name in self.force_include:
             return False
-        return name in (_DEFAULT_IGNORE_DIRS | self.extra_skip)
+        if name in (_DEFAULT_IGNORE_DIRS | self.extra_skip):
+            return True
+        # A user skip entry may be a glob (OPENDOT.md documents `skip: *.log`),
+        # which plain set membership would only match literally. Defaults are
+        # literal names, so only user entries need the fnmatch pass.
+        return any(
+            fnmatch.fnmatch(name, pat) for pat in self.extra_skip if any(c in pat for c in "*?[")
+        )
 
 
 # ---------------------------------------------------------------------------

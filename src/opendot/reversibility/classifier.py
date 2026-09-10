@@ -143,9 +143,12 @@ _NOT_SNAPSHOTTED = {
 
 def _hits_unsnapshotted_path(command: str) -> str | None:
     """If the command references a directory that snapshots skip (so it can't be
-    restored), return that name; else None."""
-    tokens = re.split(r"[\s/]+", command)
-    for tok in tokens:
+    restored), return that name; else None.
+
+    Quote characters are excluded from tokens, so quoting can't smuggle a skipped
+    path past the check: ``rm -rf ".git"`` must read the same as ``rm -rf .git``
+    (this mirrors how ``_mentions_outside_path`` tokenizes)."""
+    for tok in re.split(r"[\s/]+", re.sub(r"""['"]""", "", command)):
         if tok in _NOT_SNAPSHOTTED:
             return tok
     return None
