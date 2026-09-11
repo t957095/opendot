@@ -22,6 +22,8 @@ from rich.panel import Panel
 
 from opendot import __version__
 from opendot.agent.config import AgentConfig
+from opendot.agent.config import _max_tokens as _env_max_tokens
+from opendot.agent.config import _max_usd as _env_max_usd
 from opendot.agent.loop import Agent
 from opendot.agent.prompt import DEFAULT_SYSTEM_PROMPT
 
@@ -155,6 +157,15 @@ def _build_agent(
             mcp_manager.start()
     except Exception:  # noqa: BLE001 - MCP is optional; never block startup
         mcp_manager = None
+
+    # The CLI flag wins when given, but passing None here would override
+    # AgentConfig's env-var default_factory (an explicit None means the factory
+    # never runs), silently dropping OPENDOT_MAX_USD / OPENDOT_MAX_TOKENS. Fall
+    # back to the env var explicitly so the documented precedence holds.
+    if max_usd is None:
+        max_usd = _env_max_usd()
+    if max_tokens is None:
+        max_tokens = _env_max_tokens()
 
     return Agent(
         AgentConfig(

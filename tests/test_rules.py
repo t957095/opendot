@@ -23,6 +23,23 @@ skip: data, secrets/
     assert r.extra_skip == {"data", "secrets"}  # trailing slash stripped
 
 
+def test_glob_skip_pattern_actually_matches_filenames():
+    """OPENDOT.md documents `skip: *.log`, but skipped() was pure set membership,
+    so the pattern only ever matched a file literally named `*.log` — a user's
+    .log files were snapshotted (and clobbered on restore) despite the rule."""
+    r = parse_rules_text("```opendot\nskip: *.log, data\n```\n")
+    assert r.skipped("app.log")
+    assert r.skipped("debug.log")
+    assert r.skipped("data")  # literal entries still work
+    assert not r.skipped("notes.txt")
+
+
+def test_glob_skip_does_not_override_force_include():
+    r = parse_rules_text("```opendot\nsnapshot: app.log\nskip: *.log\n```\n")
+    assert not r.skipped("app.log")  # force_include still wins
+    assert r.skipped("other.log")
+
+
 def test_aliases_and_comments():
     text = """\
 ```opendot

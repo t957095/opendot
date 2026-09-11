@@ -694,6 +694,35 @@ def test_write_file_does_not_follow_symlink_out_of_workspace(tmp_path):
     assert target.read_text() == "NEW"
 
 
+def test_edit_does_not_follow_in_workspace_symlink(tmp_path):
+    """`edit` is a mutating write, so it must use the same open-time containment as
+    write_file: an in-workspace symlink is replaced by a real file rather than
+    written through. It previously used a bare Path.write_text, so editing
+    `link.txt` silently rewrote whatever the link pointed at."""
+    tb, wd, _ = _tb(tmp_path)
+    (wd / "real.txt").write_text("hello", encoding="utf-8")
+    os.symlink(wd / "real.txt", wd / "link.txt")
+
+    tb.call("edit", {"path": "link.txt", "find": "hello", "replace": "bye"})
+
+    assert (wd / "real.txt").read_text() == "hello"  # never written through
+    assert not (wd / "link.txt").is_symlink()  # replaced by a real file
+    assert (wd / "link.txt").read_text() == "bye"
+
+
+def test_edit_reports_the_named_path_not_a_symlink_target(tmp_path):
+    """The report must name the path the caller asked for, not a symlink's target
+    (_rel resolved, so editing `link.txt` reported `real.txt`)."""
+    tb, wd, _ = _tb(tmp_path)
+    (wd / "real.txt").write_text("hello", encoding="utf-8")
+    os.symlink(wd / "real.txt", wd / "link.txt")
+
+    out = tb.call("edit", {"path": "link.txt", "find": "hello", "replace": "bye"})
+
+    assert "link.txt" in out.splitlines()[0]
+    assert "real.txt" not in out.splitlines()[0]
+
+
 def test_write_file_normal_in_workspace_still_works(tmp_path):
     tb, wd, _ = _tb(tmp_path)
     out = tb.call("write_file", {"path": "sub/dir/file.txt", "content": "hi"})

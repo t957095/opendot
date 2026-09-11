@@ -143,9 +143,14 @@ _NOT_SNAPSHOTTED = {
 
 def _hits_unsnapshotted_path(command: str) -> str | None:
     """If the command references a directory that snapshots skip (so it can't be
-    restored), return that name; else None."""
-    tokens = re.split(r"[\s/]+", command)
-    for tok in tokens:
+    restored), return that name; else None.
+
+    Tokens are the runs of path characters between whitespace, separators, quotes
+    and shell operators — the same character class ``_mentions_outside_path``
+    uses, plus ``/`` so nested components are seen. Anything glued to the name
+    therefore can't hide it: ``rm -rf ".git"``, ``rm -rf .git>out`` and
+    ``rm -rf node_modules/.cache`` all read the same as the bare path."""
+    for tok in re.findall(r"[^\s/'\"|&;<>()]+", command):
         if tok in _NOT_SNAPSHOTTED:
             return tok
     return None
