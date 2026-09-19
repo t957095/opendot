@@ -355,9 +355,17 @@ def test_sandbox_forwards_policy_flags():
     from opendot.sandbox import build_run_command
 
     argv = build_run_command(
-        "docker", "img", Path("/tmp/sb"), "do the thing", "m",
-        network=False, env_keys=["OPENAI_API_KEY"],
-        deny=["rm -rf*"], usd=0.5, tokens=1234, api_base="http://localhost:8080",
+        "docker",
+        "img",
+        Path("/tmp/sb"),
+        "do the thing",
+        "m",
+        network=False,
+        env_keys=["OPENAI_API_KEY"],
+        deny=["rm -rf*"],
+        usd=0.5,
+        tokens=1234,
+        api_base="http://localhost:8080",
     )
     tail = " ".join(argv)
     assert "--deny rm -rf*" in tail
@@ -372,8 +380,13 @@ def test_sandbox_omits_policy_flags_when_unset():
     from opendot.sandbox import build_run_command
 
     argv = build_run_command(
-        "docker", "img", Path("/tmp/sb"), "do the thing", "m",
-        network=False, env_keys=[],
+        "docker",
+        "img",
+        Path("/tmp/sb"),
+        "do the thing",
+        "m",
+        network=False,
+        env_keys=[],
     )
     tail = " ".join(argv)
     assert "--deny" not in tail

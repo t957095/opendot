@@ -276,11 +276,17 @@ def run_sandboxed(
             raise SandboxError(f"failed to stage workspace copy: {exc}") from exc
 
         argv = build_run_command(
-            runtime, image, sandbox_dir, prompt, model, network=network, env_keys=env_keys,
+            runtime,
+            image,
+            sandbox_dir,
+            prompt,
+            model,
+            network=network,
+            env_keys=env_keys,
             deny=deny,
             usd=usd,
             tokens=tokens,
-            api_base=api_base
+            api_base=api_base,
         )
         proc = runner(argv)
         # A runner that returns nothing usable means the container never ran; treat
