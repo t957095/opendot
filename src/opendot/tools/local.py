@@ -748,6 +748,15 @@ class Toolbox:
                     last = min(len(lines), i + context)
                     for j in range(first, last + 1):
                         if j in printed:
+                            if j == i:
+                                # Already emitted as context of an earlier match:
+                                # upgrade its dash marker to the match colon so
+                                # the line is reported as a real hit.
+                                prefix = f"{rel}:{j}-"
+                                for k, hit in enumerate(hits):
+                                    if hit.startswith(prefix):
+                                        hits[k] = f"{rel}:{j}:{lines[j - 1].strip()[:200]}"
+                                        break
                             continue
                         printed.add(j)
                         text = lines[j - 1].strip()[:200]

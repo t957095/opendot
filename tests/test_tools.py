@@ -809,6 +809,12 @@ def test_grep_context_windows_do_not_duplicate_lines(tmp_path):
     assert len(body_lines) == 5  # the file has 5 lines; 3 overlapping windows must still emit each once
     import re
     assert [re.match(r"f\.txt:(\d+)", ln).group(1) for ln in body_lines] == ["1", "2", "3", "4", "5"]
+    # A line already printed as context that later matches must be upgraded to
+    # the colon marker, not left as a context dash (Copilot review on the PR).
+    assert body_lines[0] == "f.txt:1:aaa"  # first hit emitted directly
+    assert body_lines[1] == "f.txt:2-bbb"  # pure context stays dashed
+    assert body_lines[2] == "f.txt:3:aaa"  # line 3 was line 1's context, then matched
+    assert body_lines[4] == "f.txt:5:aaa"  # same upgrade for the last hit
 
 
 def test_grep_max_matches_zero_returns_no_matches(tmp_path):
