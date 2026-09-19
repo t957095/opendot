@@ -345,3 +345,38 @@ def test_cli_sandbox_partial_commit_back_exits_nonzero(monkeypatch):
     with pytest.raises(SystemExit) as ei:
         cli.main()
     assert ei.value.code == 1
+
+
+def test_sandbox_forwards_policy_flags():
+    # Regression (#163): --deny/--usd/--tokens/--api-base were silently dropped
+    # on the sandbox path; the container ran with a bare --yes.
+    from pathlib import Path
+
+    from opendot.sandbox import build_run_command
+
+    argv = build_run_command(
+        "docker", "img", Path("/tmp/sb"), "do the thing", "m",
+        network=False, env_keys=["OPENAI_API_KEY"],
+        deny=["rm -rf*"], usd=0.5, tokens=1234, api_base="http://localhost:8080",
+    )
+    tail = " ".join(argv)
+    assert "--deny rm -rf*" in tail
+    assert "--usd 0.5" in tail
+    assert "--tokens 1234" in tail
+    assert "--api-base http://localhost:8080" in tail
+
+
+def test_sandbox_omits_policy_flags_when_unset():
+    from pathlib import Path
+
+    from opendot.sandbox import build_run_command
+
+    argv = build_run_command(
+        "docker", "img", Path("/tmp/sb"), "do the thing", "m",
+        network=False, env_keys=[],
+    )
+    tail = " ".join(argv)
+    assert "--deny" not in tail
+    assert "--usd" not in tail
+    assert "--tokens" not in tail
+    assert "--api-base" not in tail

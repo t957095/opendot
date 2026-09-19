@@ -840,6 +840,12 @@ def main() -> None:
                 image=args.sandbox_image,
                 network=args.sandbox_net,
                 env_keys=_forwarded_env_keys(args.model),
+                # Forward policy/budget flags: a hard-blocked --deny pattern must
+                # not become auto-approved just because the run is sandboxed.
+                deny=list(getattr(args, "deny", []) or []),
+                usd=getattr(args, "usd", None),
+                tokens=getattr(args, "tokens", None),
+                api_base=getattr(args, "api_base", None),
             )
         except sandbox.SandboxError as exc:
             console.print(f"[bold red]sandbox:[/bold red] {exc}")
