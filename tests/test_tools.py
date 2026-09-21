@@ -806,9 +806,18 @@ def test_grep_context_windows_do_not_duplicate_lines(tmp_path):
     (wd / "f.txt").write_text("aaa\nbbb\naaa\nccc\naaa\n")
     out = tb.call("grep", {"pattern": "aaa", "path": str(wd / "f.txt"), "context": 2})
     body_lines = [ln for ln in out.splitlines() if ln.startswith("f.txt:")]
-    assert len(body_lines) == 5  # the file has 5 lines; 3 overlapping windows must still emit each once
+    assert (
+        len(body_lines) == 5
+    )  # the file has 5 lines; 3 overlapping windows must still emit each once
     import re
-    assert [re.match(r"f\.txt:(\d+)", ln).group(1) for ln in body_lines] == ["1", "2", "3", "4", "5"]
+
+    assert [re.match(r"f\.txt:(\d+)", ln).group(1) for ln in body_lines] == [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+    ]
     # A line already printed as context that later matches must be upgraded to
     # the colon marker, not left as a context dash (Copilot review on the PR).
     assert body_lines[0] == "f.txt:1:aaa"  # first hit emitted directly

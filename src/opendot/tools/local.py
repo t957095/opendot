@@ -736,13 +736,19 @@ class Toolbox:
                     lines = f.read_text(encoding="utf-8", errors="ignore").splitlines()
                 except OSError:
                     continue
-                printed: set[int] = set()  # per file: never re-emit a line from an overlapping window
+                printed: set[int] = (
+                    set()
+                )  # per file: never re-emit a line from an overlapping window
                 for i, line in enumerate(lines, 1):
                     if not rx.search(line):
                         continue
                     match_count += 1
                     if match_count > max_matches:
-                        return _truncate("\n".join(hits) + f"\n... (capped at {max_matches})") if hits else "no matches"
+                        return (
+                            _truncate("\n".join(hits) + f"\n... (capped at {max_matches})")
+                            if hits
+                            else "no matches"
+                        )
                     rel = self._rel(f)
                     first = max(1, i - context)
                     last = min(len(lines), i + context)
