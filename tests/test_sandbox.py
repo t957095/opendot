@@ -393,3 +393,59 @@ def test_sandbox_omits_policy_flags_when_unset():
     assert "--usd" not in tail
     assert "--tokens" not in tail
     assert "--api-base" not in tail
+
+
+def test_sandbox_warns_when_api_base_set_without_network(monkeypatch, capsys):
+    """--api-base names a server the container must reach, but the default
+    --network none leaves it no network at all. Warn rather than fail obscurely."""
+    import sys as _sys
+
+    from opendot import cli
+    from opendot import sandbox as sbx
+
+    monkeypatch.setattr(
+        _sys,
+        "argv",
+        ["opendot", "-p", "x", "--model", "m", "--sandbox", "--api-base", "http://localhost:8080"],
+    )
+    monkeypatch.setattr(
+        sbx,
+        "run_sandboxed",
+        lambda *a, **k: {"runtime": "docker", "changed": [], "failed": [], "returncode": 0},
+    )
+    with pytest.raises(SystemExit):
+        cli.main()
+    assert "no network" in capsys.readouterr().out
+
+
+def test_sandbox_warns_when_api_base_is_loopback_with_network(monkeypatch, capsys):
+    """With --sandbox-net the container has a network, but loopback still means
+    the container itself, not the host."""
+    import sys as _sys
+
+    from opendot import cli
+    from opendot import sandbox as sbx
+
+    monkeypatch.setattr(
+        _sys,
+        "argv",
+        [
+            "opendot",
+            "-p",
+            "x",
+            "--model",
+            "m",
+            "--sandbox",
+            "--sandbox-net",
+            "--api-base",
+            "http://localhost:8080",
+        ],
+    )
+    monkeypatch.setattr(
+        sbx,
+        "run_sandboxed",
+        lambda *a, **k: {"runtime": "docker", "changed": [], "failed": [], "returncode": 0},
+    )
+    with pytest.raises(SystemExit):
+        cli.main()
+    assert "loopback" in capsys.readouterr().out
